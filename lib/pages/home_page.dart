@@ -11,14 +11,14 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   Iterable<Contact>? _contacts;
-  Map<String, dynamic>? _weatherData; // Mapa para almacenar los datos del clima
-  final String cityName = 'Chiapas'; // Nombre de la ciudad para la consulta
+  Map<String, dynamic>? _weatherData;
+  final String cityName = 'Chiapas';
 
   @override
   void initState() {
     super.initState();
     _fetchContacts();
-    _fetchWeather(); // Llamada a la API del clima
+    _fetchWeather();
   }
 
   Future<void> _fetchContacts() async {
@@ -28,26 +28,25 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  // Función para obtener el clima de la API
   Future<void> _fetchWeather() async {
     final Uri url = Uri.parse('https://api.openweathermap.org/data/2.5/weather?q=$cityName&appid=67791e5ac5dfb40e1118b40e3637f6a8&units=metric');
     var response = await http.get(url);
     if (response.statusCode == 200) {
       var jsonResponse = jsonDecode(response.body);
       setState(() {
-        _weatherData = jsonResponse; // Almacena los datos del clima
+        _weatherData = jsonResponse;
       });
     } else {
       setState(() {
-        _weatherData = null; // Establece los datos a nulos si no se puede obtener
+        _weatherData = null;
       });
     }
   }
 
   void _callContact(String phoneNumber) async {
     final Uri url = Uri(scheme: 'tel', path: phoneNumber);
-    if (await canLaunch(url.toString())) {
-      await launch(url.toString());
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
     } else {
       throw 'Could not launch $url';
     }
@@ -55,10 +54,20 @@ class _HomePageState extends State<HomePage> {
 
   void _sendMessage(String phoneNumber) async {
     final Uri url = Uri(scheme: 'sms', path: phoneNumber);
-    if (await canLaunch(url.toString())) {
-      await launch(url.toString());
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
     } else {
       throw 'Could not launch $url';
+    }
+  }
+
+  void _openGitHubRepo() async {
+    const String url = 'https://github.com/Gerar-do/App_movil_Fusi-n-de-retos-Flutter.git';
+    final Uri uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication); // Abre en el navegador externo
+    } else {
+      throw 'No se pudo abrir $url';
     }
   }
 
@@ -72,28 +81,74 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: Colors.black,
       body: Column(
         children: [
-          // Mostrar el clima
+          // Mostrar el clima con un tamaño reducido
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(8.0),
             child: _weatherData == null
-                ? Center(child: CircularProgressIndicator()) // Mostrar carga mientras se obtienen los datos del clima
+                ? Center(child: CircularProgressIndicator())
                 : Column(
               children: [
                 Text(
                   'Clima en ${_weatherData!['name']}',
-                  style: TextStyle(color: Colors.white, fontSize: 24),
+                  style: TextStyle(color: Colors.white, fontSize: 20),
                 ),
                 Text(
                   '${_weatherData!['main']['temp']}°C',
-                  style: TextStyle(color: Colors.white, fontSize: 48),
+                  style: TextStyle(color: Colors.white, fontSize: 36),
                 ),
                 Text(
                   '${_weatherData!['weather'][0]['description']}',
-                  style: TextStyle(color: Colors.grey, fontSize: 18),
+                  style: TextStyle(color: Colors.grey, fontSize: 16),
                 ),
               ],
             ),
           ),
+          // Tarjeta de perfil con nombre y matrícula
+          Card(
+            color: Colors.grey[900],
+            margin: EdgeInsets.symmetric(vertical: 10.0, horizontal: 25.0),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ListTile(
+                    leading: CircleAvatar(
+                      backgroundImage: AssetImage('asset/img/perfil.jpg'),
+                      radius: 30,
+                    ),
+                    title: Text(
+                      'Gerardo Jafet Toledo Cañaveral',
+                      style: TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      'Matrícula: 211228\nTeléfono: 9614425550',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.call, color: Colors.green),
+                        onPressed: () => _callContact('9614425550'),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.message, color: Colors.blue),
+                        onPressed: () => _sendMessage('9614425550'),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.link, color: Colors.blue),
+                        onPressed: _openGitHubRepo,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
           // Mostrar los contactos
           Expanded(
             child: _contacts == null
@@ -102,7 +157,6 @@ class _HomePageState extends State<HomePage> {
               itemCount: _contacts!.length,
               itemBuilder: (context, index) {
                 Contact contact = _contacts!.elementAt(index);
-
                 return ListTile(
                   leading: contact.avatar != null && contact.avatar!.isNotEmpty
                       ? CircleAvatar(
@@ -124,97 +178,11 @@ class _HomePageState extends State<HomePage> {
                         : 'Sin número',
                     style: TextStyle(color: Colors.grey),
                   ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ContactDetailPage(
-                          contact: contact,
-                          onCall: _callContact,
-                          onMessage: _sendMessage,
-                        ),
-                      ),
-                    );
-                  },
                 );
               },
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class ContactDetailPage extends StatelessWidget {
-  final Contact contact;
-  final Function(String) onCall;
-  final Function(String) onMessage;
-
-  ContactDetailPage({
-    required this.contact,
-    required this.onCall,
-    required this.onMessage,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(contact.displayName ?? 'Detalles del contacto', style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.black,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      backgroundColor: Colors.black,
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            contact.avatar != null && contact.avatar!.isNotEmpty
-                ? ClipOval(
-              child: Image.memory(
-                contact.avatar!,
-                width: 100,
-                height: 100,
-                fit: BoxFit.cover,
-              ),
-            )
-                : Icon(Icons.person, size: 100, color: Colors.white),
-            SizedBox(height: 16),
-            Text(
-              contact.displayName ?? 'Sin nombre',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-            SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  icon: Icon(Icons.call),
-                  color: Colors.green,
-                  onPressed: () {
-                    if (contact.phones?.isNotEmpty == true) {
-                      onCall(contact.phones!.first.value!);
-                    }
-                  },
-                  iconSize: 40,
-                ),
-                SizedBox(width: 20),
-                IconButton(
-                  icon: Icon(Icons.message),
-                  color: Colors.blue,
-                  onPressed: () {
-                    if (contact.phones?.isNotEmpty == true) {
-                      onMessage(contact.phones!.first.value!);
-                    }
-                  },
-                  iconSize: 40,
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }
